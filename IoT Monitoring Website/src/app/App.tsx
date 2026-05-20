@@ -66,6 +66,7 @@ function appendHistoricalPoint(prev, point) {
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1Mp8GrsijPcYzYjob_qEbnv9Nh7sn8nIgAfvoUAUnw7w/gviz/tq?tqx=out:csv&gid=1416788819';
 
 function parseNumber(value) {
+  if (typeof value === 'number') return value;
   if (typeof value !== 'string') return 0;
   const normalized = value.trim();
 
@@ -299,6 +300,21 @@ export default function App() {
         const latestRow = orderedRows[orderedRows.length - 1];
         const latestPoint = createHistoricalPoint(latestRow);
 
+        // Find the latest row with a non-empty HourMeter to avoid showing 0 due to temporary blank rows,
+        // while still respecting explicit resets to '0' or '0.0' sent by the ESP.
+        const latestHourMeterRow = [...orderedRows].reverse().find(row => {
+          if (row.HourMeter === undefined || row.HourMeter === null) return false;
+          return String(row.HourMeter).trim() !== '';
+        });
+        const finalHourMeter = latestHourMeterRow ? parseNumber(latestHourMeterRow.HourMeter) : 0;
+
+        // Find the latest row with a non-empty Odo_km
+        const latestOdoRow = [...orderedRows].reverse().find(row => {
+          if (row.Odo_km === undefined || row.Odo_km === null) return false;
+          return String(row.Odo_km).trim() !== '';
+        });
+        const finalOdo = latestOdoRow ? parseNumber(latestOdoRow.Odo_km) : 0;
+
         // Check if there is a new timestamp update
         const isNewTimestamp = latestRow.Timestamp !== latestTimestampRef.current;
         if (isNewTimestamp) {
@@ -314,11 +330,19 @@ export default function App() {
 
         const isStale = isNaN(sheetTime) ? false : (timeDiffFromNow > 60 || timeSinceLastNewData > 15);
 
-        setSensorData(prev => ({
-          ...prev,
-          ...parseLiveData(latestRow),
-          online: isStale ? 0 : 1, // Override online state based on staleness detection
-        }));
+        setSensorData(prev => {
+          const parsed = parseLiveData(latestRow);
+          const hasHourMeter = latestHourMeterRow !== undefined;
+          const hasOdo = latestOdoRow !== undefined;
+          
+          return {
+            ...prev,
+            ...parsed,
+            hourMeter: hasHourMeter ? finalHourMeter : prev.hourMeter,
+            km: hasOdo ? finalOdo : prev.km,
+            online: isStale ? 0 : 1, // Override online state based on staleness detection
+          };
+        });
 
         setBrakeActive(parseNumber(latestRow.Brake) === 1);
 
