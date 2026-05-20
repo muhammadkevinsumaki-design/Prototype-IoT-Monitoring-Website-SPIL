@@ -1,0 +1,2 @@
+Timestamp,Temp_C,Poli_bar,Vbat_V,Brake,Dplus,RPM,Speed_kmh,Odo_km,PTrans_bar,TTrans_C,Cnt_Empty,Cnt_Loaded,HourMeter,Uptime_s,Alarm_Temp,Alarm_Poli,Alarm_Vbat
+2026-05-19 11:02:50,127,"2,3",11,0,1,1421,"21,9","0,5","2,9","76,9",10,2,9.7,875,1,0,1
